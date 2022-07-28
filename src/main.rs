@@ -1,7 +1,9 @@
-use once_cell::sync::Lazy;
+use once_cell::sync::{Lazy, OnceCell};
+use windows::Win32::Foundation::HWND;
 use std::borrow::BorrowMut;
-use std::sync::Arc;
+use std::iter::Once;
 use std::sync::atomic::{AtomicPtr, Ordering};
+use std::sync::{Arc, Mutex};
 use std::{thread::sleep, time::Duration};
 
 use windows::Win32::{
@@ -9,25 +11,45 @@ use windows::Win32::{
     UI::WindowsAndMessaging::*,
 };
 fn main() {
-
-    unsafe {
-        let mut hook_ptr = SetWindowsHookExA(WH_KEYBOARD_LL, Some(keybd_proc), HINSTANCE::default(), 0)
-        .expect("fail at setting hooks for keyboard");
-        KEYBD_HHOOK = Arc::new(hook_ptr);
+    set_hook(&KEYBD_HHOOK);
+    //unset_hook(&KEYBD_HHOOK);
+    println!("{}", KEYBD_HHOOK.get().unwrap().0);
+    unsafe{
+        let mut msg = MSG::default();
+        GetMessageW(&mut msg, HWND::default(), 0, 0);
     }
-    sleep(Duration::from_secs(10));
 }
 
-static KEYBD_HHOOK: Lazy<Arc<HHOOK>> = Lazy::new(Arc::default);
+static KEYBD_HHOOK: OnceCell<HHOOK> = OnceCell::new();
 
 unsafe extern "system" fn keybd_proc(code: i32, wparam: WPARAM, lparam: LPARAM) -> LRESULT {
-    println!("code = {}",code);
+    println!("code = {}", code);
     if code < 0 {
         return CallNextHookEx(HHOOK::default(), code, wparam, lparam);
     }
-    if lparam.0 == 0x100 {
+    println!("lparam.0={}",wparam.0);
+    if wparam.0 == 0x100 {
         let code = (*(wparam.0 as *const KBDLLHOOKSTRUCT)).vkCode;
         println!("pressed code={}", code);
     }
+    // let other hook continue to handle the event
     return LRESULT(0);
+}
+
+fn set_hook(hook_ptr: &OnceCell<HHOOK>) {
+    unsafe {
+        let hook = SetWindowsHookExA(WH_KEYBOARD_LL, Some(keybd_proc), HINSTANCE::default(), 0)
+            .expect("fail at setting hooks for keyboard");
+        hook_ptr.set(hook).unwrap();
+    }
+    println!("hooked!");
+}
+
+fn unset_hook(hook_ptr: &OnceCell<HHOOK>) {
+    unsafe {
+        let success = UnhookWindowsHookEx(*hook_ptr.get().unwrap());
+        if success.as_bool() {
+            println!("unhooked!");
+        }
+    }
 }

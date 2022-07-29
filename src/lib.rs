@@ -3,6 +3,7 @@
 mod common;
 
 mod public;
+pub mod key_enums;
 pub use crate::public::*;
 
 #[cfg(target_os = "windows")]

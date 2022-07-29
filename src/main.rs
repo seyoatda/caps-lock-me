@@ -1,3 +1,4 @@
+use caps_lock_me::key_enums::VirtualKey;
 use once_cell::sync::{Lazy, OnceCell};
 use std::borrow::BorrowMut;
 use std::iter::Once;
@@ -23,14 +24,13 @@ fn main() {
 static KEYBD_HHOOK: OnceCell<HHOOK> = OnceCell::new();
 
 unsafe extern "system" fn keybd_proc(code: i32, wparam: WPARAM, lparam: LPARAM) -> LRESULT {
-    println!("code = {}", code);
     if code < 0 {
         return CallNextHookEx(HHOOK::default(), code, wparam, lparam);
     }
-    println!("wparam.0={}", wparam.0);
     if wparam.0 == 0x100 {
         let code = (*(lparam.0 as *const KBDLLHOOKSTRUCT)).vkCode;
-        println!("pressed code={}", code);
+        let key = VirtualKey::try_from(code).unwrap();
+        println!("code={:x}, pressed key= {:?}", code, key);
     }
     // let other hook continue to handle the event
     return LRESULT(0);

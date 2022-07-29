@@ -1,6 +1,9 @@
-use num_enum::TryFromPrimitive;
+use std::{collections::HashMap, sync::Mutex};
 
-#[derive(Debug, Eq, PartialEq, TryFromPrimitive)]
+use num_enum::TryFromPrimitive;
+use once_cell::sync::Lazy;
+
+#[derive(Debug, Eq, PartialEq, Hash, TryFromPrimitive)]
 #[repr(u32)]
 pub enum VirtualKey {
     Backspace = 0x08,
@@ -47,7 +50,7 @@ pub enum VirtualKey {
     KeyL = 0x4C,
     KeyM = 0x4D,
     KeyN = 0x4E,
-    keyO = 0x4F,
+    KeyO = 0x4F,
     KeyP = 0x50,
     KeyQ = 0x51,
     KeyR = 0x52,
@@ -63,3 +66,27 @@ pub enum VirtualKey {
     #[num_enum(default)]
     Unkown = 0x0,
 }
+
+#[derive(Debug, Eq, PartialEq, TryFromPrimitive)]
+#[repr(u32)]
+pub enum KeyAction {
+    Press = 0x100,
+    Release = 0x101,
+
+    #[num_enum(default)]
+    Unkown = 0x0,
+}
+
+#[derive(Debug, Eq, PartialEq, TryFromPrimitive)]
+#[repr(u32)]
+pub enum KeyStatus {
+    Pressed,
+    Released,
+    #[num_enum(default)]
+    Unkown,
+}
+
+pub type KeyStatusMap = HashMap<VirtualKey, KeyStatus>;
+
+pub static KEY_STATUS_MAP: Lazy<Mutex<KeyStatusMap>> =
+    Lazy::new(|| Mutex::new(KeyStatusMap::new()));

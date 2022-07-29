@@ -1,4 +1,4 @@
-use caps_lock_me::key_enums::VirtualKey;
+use caps_lock_me::key_enums::{KeyAction, KeyStatus, VirtualKey, KEY_STATUS_MAP};
 use once_cell::sync::{Lazy, OnceCell};
 use std::borrow::BorrowMut;
 use std::iter::Once;
@@ -27,11 +27,25 @@ unsafe extern "system" fn keybd_proc(code: i32, wparam: WPARAM, lparam: LPARAM) 
     if code < 0 {
         return CallNextHookEx(HHOOK::default(), code, wparam, lparam);
     }
-    if wparam.0 == 0x100 {
-        let code = (*(lparam.0 as *const KBDLLHOOKSTRUCT)).vkCode;
-        let key = VirtualKey::try_from(code).unwrap();
-        println!("code={:x}, pressed key= {:?}", code, key);
+    let action = KeyAction::try_from(wparam.0 as u32).unwrap();
+    let code = (*(lparam.0 as *const KBDLLHOOKSTRUCT)).vkCode;
+    let key = VirtualKey::try_from(code).unwrap();
+    match action {
+        KeyAction::Press => {
+            KEY_STATUS_MAP
+                .lock()
+                .unwrap()
+                .insert(key, KeyStatus::Pressed);
+        }
+        KeyAction::Release => {
+            KEY_STATUS_MAP
+                .lock()
+                .unwrap()
+                .insert(key, KeyStatus::Released);
+        }
+        KeyAction::Unkown => {}
     }
+    println!("{:?}",KEY_STATUS_MAP.lock().unwrap());
     // let other hook continue to handle the event
     return LRESULT(0);
 }

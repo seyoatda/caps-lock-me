@@ -90,3 +90,14 @@ pub type KeyStatusMap = HashMap<VirtualKey, KeyStatus>;
 
 pub static KEY_STATUS_MAP: Lazy<Mutex<KeyStatusMap>> =
     Lazy::new(|| Mutex::new(KeyStatusMap::new()));
+
+pub type KeySet = Vec<VirtualKey>;    
+pub fn when_key_pressed(key:VirtualKey){
+
+}
+pub fn after_key_pressed(){}
+
+pub fn when_multi_key_pressed(keys:KeySet){}
+pub fn after_multi_key_pressed(keys:KeySet){
+
+}

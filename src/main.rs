@@ -1,24 +1,27 @@
+use std::intrinsics::size_of;
+
 use caps_lock_me::key_enums::{KeyAction, KeyStatus, VirtualKey, KEY_STATUS_MAP};
-use once_cell::sync::{Lazy, OnceCell};
-use std::borrow::BorrowMut;
-use std::iter::Once;
-use std::sync::atomic::{AtomicPtr, Ordering};
-use std::sync::{Arc, Mutex};
-use std::{thread::sleep, time::Duration};
+use once_cell::sync::OnceCell;
 use windows::Win32::Foundation::HWND;
 
+use windows::Win32::UI::Input::KeyboardAndMouse::{
+    SendInput, INPUT, INPUT_KEYBOARD, KEYBDINPUT, KEYEVENTF_KEYUP, VIRTUAL_KEY,
+};
 use windows::Win32::{
     Foundation::{HINSTANCE, LPARAM, LRESULT, WPARAM},
+    UI::Input::*,
     UI::WindowsAndMessaging::*,
 };
 fn main() {
     set_hook(&KEYBD_HHOOK);
     //unset_hook(&KEYBD_HHOOK);
     println!("{}", KEYBD_HHOOK.get().unwrap().0);
+
     unsafe {
         let mut msg = MSG::default();
         GetMessageW(&mut msg, HWND::default(), 0, 0);
     }
+    send_key_input(&[VirtualKey::Key0]);
 }
 
 static KEYBD_HHOOK: OnceCell<HHOOK> = OnceCell::new();
@@ -45,7 +48,7 @@ unsafe extern "system" fn keybd_proc(code: i32, wparam: WPARAM, lparam: LPARAM) 
         }
         KeyAction::Unkown => {}
     }
-    println!("{:?}",KEY_STATUS_MAP.lock().unwrap());
+    println!("{:?}", KEY_STATUS_MAP.lock().unwrap());
     // let other hook continue to handle the event
     return LRESULT(0);
 }
@@ -67,5 +70,24 @@ fn unset_hook(hook_ptr: &OnceCell<HHOOK>) {
         if success.as_bool() {
             println!("unhooked!");
         }
+    }
+}
+
+pub fn send_key_input(keys: &[VirtualKey]) {
+    let key_code = keys.get(0).unwrap();
+    let flag = KEYEVENTF_KEYUP;
+    let key_input = KEYBDINPUT {
+        wVk: VIRTUAL_KEY(*key_code as u16),
+        wScan: 0,
+        dwFlags: flag,
+        time: 0,
+        dwExtraInfo: 0,
+    };
+    let input = INPUT {
+        r#type: INPUT_KEYBOARD,
+        Anonymous: KeyboardAndMouse::INPUT_0 { ki: (key_input) },
+    };
+    unsafe {
+        SendInput(&[input], size_of::<INPUT>());
     }
 }

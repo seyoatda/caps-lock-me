@@ -1,9 +1,7 @@
-use std::{collections::HashMap, sync::Mutex};
 
 use num_enum::TryFromPrimitive;
-use once_cell::sync::Lazy;
 
-#[derive(Debug, Eq, PartialEq, Hash, TryFromPrimitive)]
+#[derive(Debug, Eq, PartialEq, Hash, TryFromPrimitive, Clone, Copy)]
 #[repr(u32)]
 pub enum VirtualKey {
     Backspace = 0x08,
@@ -63,6 +61,11 @@ pub enum VirtualKey {
     KeyY = 0x59,
     KeyZ = 0x5A,
 
+    LeftShift = 0xA0,
+    RightShift = 0xA1,
+    LeftControl = 0xA2,
+    RightControl = 0xA3,
+
     #[num_enum(default)]
     Unkown = 0x0,
 }
@@ -86,18 +89,11 @@ pub enum KeyStatus {
     Unkown,
 }
 
-pub type KeyStatusMap = HashMap<VirtualKey, KeyStatus>;
 
-pub static KEY_STATUS_MAP: Lazy<Mutex<KeyStatusMap>> =
-    Lazy::new(|| Mutex::new(KeyStatusMap::new()));
-
-pub type KeySet = Vec<VirtualKey>;    
-pub fn when_key_pressed(key:VirtualKey){
-
+pub trait Key {
+    fn is_pressed(&self) -> bool;
+    fn press(&self);
+    fn on_pressed(&self, func: &dyn Fn() -> ());
 }
-pub fn after_key_pressed(){}
 
-pub fn when_multi_key_pressed(keys:KeySet){}
-pub fn after_multi_key_pressed(keys:KeySet){
 
-}

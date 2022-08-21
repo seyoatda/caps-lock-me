@@ -1,5 +1,6 @@
 use std::collections::HashMap;
 use std::sync::Mutex;
+use std::thread;
 
 use once_cell::sync::Lazy;
 
@@ -10,12 +11,16 @@ impl Key for VirtualKey {
     fn is_pressed(&self) -> bool {
         let map = KEY_STATUS_MAP.lock().unwrap();
         let key_status = map.get(self).unwrap_or(&KeyStatus::Released);
-
+        println!("key status: {:?}", &self);
         return key_status == &KeyStatus::Pressed;
     }
 
     fn press(&self) {
-        send_key_input(self);
+        let key = self.clone();
+        thread::spawn(move|| {
+            send_key_input(&key);
+        });
+        println!("{:?} send key input", &self);
     }
 
     fn on_pressed(&self, func: &dyn Fn() -> ()) {
@@ -36,6 +41,7 @@ impl Key for VirtualKeySet {
                 return false;
             }
         }
+        println!("{:?} is pressed", self.keys);
         return true;
     }
     fn on_pressed(&self, func: &dyn Fn() -> ()) {
@@ -66,18 +72,24 @@ impl KeySetMap {
 
     pub fn go_through(&self) {
         for key_set in &self.key_set_list {
+            println!("go through {:?}", &key_set.0);
             if key_set.0.is_pressed() {
                 key_set.1();
+                println!("{:?} will will execute", &key_set.1);
             }
         }
     }
 
-    pub fn put(&mut self,key_set:VirtualKeySet,binding:fn()){
+    pub fn put(&mut self, key_set: VirtualKeySet, binding: fn()) {
         self.key_set_list.insert(key_set, binding);
     }
 }
 
 pub fn when_keys_pressed(keys: &[VirtualKey], binding: fn() -> ()) {
-    let key_set = VirtualKeySet{keys:keys.to_vec()};
+    let key_set = VirtualKeySet {
+        keys: keys.to_vec(),
+    };
+
+    println!("put key set {:?}", &key_set);
     KEY_SET_MAP.lock().unwrap().put(key_set, binding);
 }

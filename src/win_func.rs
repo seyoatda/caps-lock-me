@@ -1,10 +1,10 @@
 use crate::key_enums::{KeyAction, KeyStatus, VirtualKey};
-use crate::key_func::{KEY_STATUS_MAP, KEY_SET_MAP};
+use crate::key_func::{KEY_SET_MAP, KEY_STATUS_MAP};
 use once_cell::sync::OnceCell;
 use std::mem::size_of;
 use windows::Win32::Foundation::HWND;
 use windows::Win32::UI::Input::KeyboardAndMouse::{
-    SendInput, INPUT, INPUT_KEYBOARD, KEYBDINPUT, KEYEVENTF_KEYUP, VIRTUAL_KEY,
+    SendInput, INPUT, INPUT_KEYBOARD, KEYBDINPUT, KEYEVENTF_KEYUP, VIRTUAL_KEY, KEYBD_EVENT_FLAGS,
 };
 
 use windows::Win32::{
@@ -47,7 +47,11 @@ unsafe extern "system" fn keybd_proc(code: i32, wparam: WPARAM, lparam: LPARAM) 
         }
         KeyAction::Unkown => {}
     }
-    KEY_SET_MAP.lock().unwrap().go_through();
+    println!("hook msg: key: {:?}, status:{:?}", &key, &action);
+    let some_key_pressed = KEY_SET_MAP.lock().unwrap().go_through();
+    if some_key_pressed {
+        return LRESULT(1);
+    }
     // let other hook continue to handle the event
     return LRESULT(0);
 }
@@ -62,9 +66,8 @@ fn unset_hook(hook_ptr: &OnceCell<HHOOK>) {
     }
 }
 
-pub fn send_key_input(key:&VirtualKey) {
+pub fn send_key_input(key: &VirtualKey, flag: KEYBD_EVENT_FLAGS) {
     let key_code = key;
-    let flag = KEYEVENTF_KEYUP;
     let key_input = KEYBDINPUT {
         wVk: VIRTUAL_KEY(*key_code as u16),
         wScan: 0,
@@ -81,11 +84,11 @@ pub fn send_key_input(key:&VirtualKey) {
     }
 }
 
-pub fn listen_event(){
+pub fn listen_event() {
     set_hook(&KEYBD_HHOOK);
     unsafe {
         let mut msg = MSG::default();
         let success = GetMessageW(&mut msg, HWND::default(), 0, 0);
-        println!("getMessageW:a{}",success.0);
+        println!("getMessageW:a{}", success.0);
     }
 }

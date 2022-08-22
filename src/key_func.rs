@@ -3,6 +3,7 @@ use std::sync::Mutex;
 use std::thread;
 
 use once_cell::sync::Lazy;
+use windows::Win32::UI::Input::KeyboardAndMouse::{KEYBD_EVENT_FLAGS, KEYEVENTF_KEYUP};
 
 use super::key_enums::*;
 use crate::win_func::*;
@@ -17,8 +18,9 @@ impl Key for VirtualKey {
 
     fn press(&self) {
         let key = self.clone();
-        thread::spawn(move|| {
-            send_key_input(&key);
+        thread::spawn(move || {
+            send_key_input(&key, KEYBD_EVENT_FLAGS(0));
+            send_key_input(&key, KEYEVENTF_KEYUP);
         });
         println!("{:?} send key input", &self);
     }
@@ -70,14 +72,18 @@ impl KeySetMap {
         }
     }
 
-    pub fn go_through(&self) {
+    /// Returns the go through of this [`KeySetMap`].
+    /// if return true then some key was pressed
+    pub fn go_through(&self) -> bool {
         for key_set in &self.key_set_list {
             println!("go through {:?}", &key_set.0);
             if key_set.0.is_pressed() {
                 key_set.1();
                 println!("{:?} will will execute", &key_set.1);
+                return true;
             }
         }
+        return false;
     }
 
     pub fn put(&mut self, key_set: VirtualKeySet, binding: fn()) {

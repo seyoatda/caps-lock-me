@@ -29,6 +29,7 @@ unsafe extern "system" fn keybd_proc(code: i32, wparam: WPARAM, lparam: LPARAM) 
     if code < 0 {
         return CallNextHookEx(HHOOK::default(), code, wparam, lparam);
     }
+    println!("WPARAM:      {}",wparam.0);
     let action = KeyAction::try_from(wparam.0 as u32).unwrap();
     let code = (*(lparam.0 as *const KBDLLHOOKSTRUCT)).vkCode;
     let key = VirtualKey::try_from(code).unwrap();
@@ -89,6 +90,6 @@ pub fn listen_event() {
     unsafe {
         let mut msg = MSG::default();
         let success = GetMessageW(&mut msg, HWND::default(), 0, 0);
-        println!("getMessageW:a{}", success.0);
+        println!("getMessageW: {}", success.0);
     }
 }

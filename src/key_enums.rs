@@ -92,8 +92,10 @@ pub enum KeyStatus {
 
 pub trait Key {
     fn is_pressed(&self) -> bool;
+    fn is_released(&self) -> bool;
     fn press(&self);
     fn on_pressed(&self, func: &dyn Fn() -> ());
+
 }
 
 

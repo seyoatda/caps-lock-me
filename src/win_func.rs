@@ -4,7 +4,7 @@ use once_cell::sync::OnceCell;
 use std::mem::size_of;
 use windows::Win32::Foundation::HWND;
 use windows::Win32::UI::Input::KeyboardAndMouse::{
-    SendInput, INPUT, INPUT_KEYBOARD, KEYBDINPUT, KEYEVENTF_KEYUP, VIRTUAL_KEY, KEYBD_EVENT_FLAGS,
+    SendInput, INPUT, INPUT_KEYBOARD, KEYBDINPUT, KEYBD_EVENT_FLAGS, KEYEVENTF_KEYUP, VIRTUAL_KEY,
 };
 
 use windows::Win32::{
@@ -29,10 +29,15 @@ unsafe extern "system" fn keybd_proc(code: i32, wparam: WPARAM, lparam: LPARAM) 
     if code < 0 {
         return CallNextHookEx(HHOOK::default(), code, wparam, lparam);
     }
-    println!("WPARAM:      {}",wparam.0);
     let action = KeyAction::try_from(wparam.0 as u32).unwrap();
-    let code = (*(lparam.0 as *const KBDLLHOOKSTRUCT)).vkCode;
-    let key = VirtualKey::try_from(code).unwrap();
+    let key_stuct = *(lparam.0 as *const KBDLLHOOKSTRUCT);
+    let vk_code = key_stuct.vkCode;
+    let extra_info = key_stuct.dwExtraInfo;
+    let key = VirtualKey::try_from(vk_code).unwrap();
+    if extra_info == 0x1234 {
+        println!("a simulated key input is send");
+        return CallNextHookEx(HHOOK::default(), code, wparam, lparam);
+    }
     match action {
         KeyAction::Press => {
             KEY_STATUS_MAP
@@ -74,7 +79,7 @@ pub fn send_key_input(key: &VirtualKey, flag: KEYBD_EVENT_FLAGS) {
         wScan: 0,
         dwFlags: flag,
         time: 0,
-        dwExtraInfo: 0,
+        dwExtraInfo: 0x1234,
     };
     let input = INPUT {
         r#type: INPUT_KEYBOARD,

@@ -1,6 +1,6 @@
-use std::collections::HashMap;
 use std::sync::Mutex;
 use std::thread;
+use std::{collections::HashMap, sync::Arc};
 
 use chrono::Local;
 use once_cell::sync::Lazy;
@@ -72,6 +72,8 @@ impl Key for VirtualKeySet {
 }
 
 pub type KeyStatusMap = HashMap<VirtualKey, KeyStatus>;
+pub type KeyHander = dyn Fn() + Send + Sync + 'static;
+pub type KeyHanderPtr = Arc<KeyHander>;
 
 pub static KEY_STATUS_MAP: Lazy<Mutex<KeyStatusMap>> =
     Lazy::new(|| Mutex::new(KeyStatusMap::new()));
@@ -79,7 +81,7 @@ pub static KEY_STATUS_MAP: Lazy<Mutex<KeyStatusMap>> =
 pub static KEY_SET_MAP: Lazy<Mutex<KeySetMap>> = Lazy::new(|| Mutex::new(KeySetMap::new()));
 
 pub struct KeySetMap {
-    key_set_list: HashMap<VirtualKeySet, fn()>,
+    key_set_list: HashMap<VirtualKeySet, Arc<KeyHander>>,
     last_key_set_pressed: Option<VirtualKeySet>,
     last_pressed_time: Option<i64>,
 }
@@ -96,8 +98,8 @@ impl KeySetMap {
     /// Returns the go through of this [`KeySetMap`].
     /// if return true then some key was pressed
     pub fn go_through(&mut self) -> bool {
+        // todo: need to profile this control flow
         for key_set in &self.key_set_list {
-            println!("go through {:?}", &key_set.0);
             let cur_keys = key_set.0;
             let cur_time = Local::now().timestamp_millis();
             if cur_keys.is_pressed() {
@@ -108,22 +110,11 @@ impl KeySetMap {
                 } else {
                     if self.last_key_set_pressed.as_ref().unwrap() == cur_keys {
                         if cur_time - self.last_pressed_time.unwrap() < 500 {
-                            println!(
-                                "{:?}:last pressed time {}",
-                                &cur_keys,
-                                self.last_pressed_time.unwrap()
-                            );
-                            println!("{:?}:cur pressed time {}", &cur_keys, cur_time);
                             return true;
                         } else {
-                            println!(" more than 500 ms, keep printing");
                             key_set.1();
                         }
                     } else {
-                        println!(
-                            "another key was pressed: {:?}, time: {}",
-                            &cur_keys, cur_time
-                        );
                         self.last_key_set_pressed = Some(cur_keys.clone());
                         self.last_pressed_time = Some(cur_time);
                         key_set.1();
@@ -135,13 +126,12 @@ impl KeySetMap {
                 self.last_pressed_time = None;
             }
         }
-        // capslock as a function key, block other key input when it was pressed
         return false;
     }
 
     pub fn release(&mut self, key: VirtualKey) {}
 
-    pub fn put(&mut self, key_set: VirtualKeySet, binding: fn()) {
+    pub fn put(&mut self, key_set: VirtualKeySet, binding: KeyHanderPtr) {
         self.key_set_list.insert(key_set, binding);
     }
 
@@ -151,15 +141,27 @@ impl KeySetMap {
     }
 }
 
-pub fn when_keys_pressed(keys: &[VirtualKey], binding: fn() -> ()) {
+pub fn when_keys_pressed<F: Fn() + Send + Sync + 'static>(keys: &[VirtualKey], binding: F) {
     let key_set = VirtualKeySet {
         keys: keys.to_vec(),
     };
 
     println!("put key set {:?}", &key_set);
-    KEY_SET_MAP.lock().unwrap().put(key_set, binding);
+    KEY_SET_MAP.lock().unwrap().put(key_set, Arc::new(binding));
 }
 
 pub fn bind_key_set(keys: &[VirtualKey], key: VirtualKey) {
-    when_keys_pressed(keys, || key.press())
+    when_keys_pressed(keys, move || key.press())
+}
+
+/// bind a set of keys to a set of simulated keys
+/// 
+/// the simulated keys will be pressed sequencely
+pub fn bind_key_sets(keys: &[VirtualKey], simulated_keys: &[VirtualKey]) {
+    let simulated_keys = simulated_keys.to_vec();
+    when_keys_pressed(keys, move || {
+        for key in &simulated_keys {
+            key.press();
+        }
+    })
 }

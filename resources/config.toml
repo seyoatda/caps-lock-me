@@ -1,0 +1,30 @@
+name = "vim_like"
+
+[[key_mappings]]
+origin.keys = ["CapsLock", "KeyH"]
+mapping.keys = ["LeftArrow"]
+
+[[key_mappings]]
+origin.keys = ["CapsLock", "KeyJ"]
+mapping.keys = ["DownArrow"]
+
+[[key_mappings]]
+origin.keys = ["CapsLock", "KeyK"]
+mapping.keys = ["UpArrow"]
+
+[[key_mappings]]
+origin.keys = ["CapsLock", "KeyL"]
+mapping.keys = ["RightArrow"]
+
+[[key_mappings]]
+origin.keys = ["CapsLock", "Key6"]
+mapping.keys = ["Home"]
+
+[[key_mappings]]
+origin.keys = ["CapsLock", "Key4"]
+mapping.keys = ["End"]
+
+[[key_mappings]]
+origin.keys = ["CapsLock", "Enter"]
+mapping.keys = ["Enter", "End"]
+

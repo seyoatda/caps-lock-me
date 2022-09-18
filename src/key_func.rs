@@ -1,7 +1,7 @@
 use std::sync::Mutex;
 use std::thread;
 use std::{collections::HashMap, sync::Arc};
-
+use serde::{Serialize, Deserialize};
 use chrono::Local;
 use once_cell::sync::Lazy;
 use windows::Win32::UI::Input::KeyboardAndMouse::{KEYBD_EVENT_FLAGS, KEYEVENTF_KEYUP};
@@ -34,9 +34,10 @@ impl Key for VirtualKey {
         }
     }
 }
-#[derive(Debug, Eq, PartialEq, Hash, Clone)]
+
+#[derive(Debug, Eq, PartialEq, Hash, Clone, Deserialize, Serialize)]
 pub struct VirtualKeySet {
-    keys: Vec<VirtualKey>,
+    pub keys: Vec<VirtualKey>,
 }
 
 impl VirtualKeySet {
@@ -60,20 +61,20 @@ impl Key for VirtualKeySet {
         println!("{:?} is pressed", self.keys);
         return true;
     }
+    fn is_released(&self) -> bool {
+        !self.is_pressed()
+    }
+    fn press(&self) {}
     fn on_pressed(&self, func: &dyn Fn() -> ()) {
         if self.is_pressed() {
             func();
         }
     }
-    fn is_released(&self) -> bool {
-        !self.is_pressed()
-    }
-    fn press(&self) {}
 }
 
 pub type KeyStatusMap = HashMap<VirtualKey, KeyStatus>;
-pub type KeyHander = dyn Fn() + Send + Sync + 'static;
-pub type KeyHanderPtr = Arc<KeyHander>;
+pub type KeyHandler = dyn Fn() + Send + Sync + 'static;
+pub type KeyHandlerPtr = Arc<KeyHandler>;
 
 pub static KEY_STATUS_MAP: Lazy<Mutex<KeyStatusMap>> =
     Lazy::new(|| Mutex::new(KeyStatusMap::new()));
@@ -81,7 +82,7 @@ pub static KEY_STATUS_MAP: Lazy<Mutex<KeyStatusMap>> =
 pub static KEY_SET_MAP: Lazy<Mutex<KeySetMap>> = Lazy::new(|| Mutex::new(KeySetMap::new()));
 
 pub struct KeySetMap {
-    key_set_list: HashMap<VirtualKeySet, Arc<KeyHander>>,
+    key_set_list: HashMap<VirtualKeySet, Arc<KeyHandler>>,
     last_key_set_pressed: Option<VirtualKeySet>,
     last_pressed_time: Option<i64>,
 }
@@ -129,9 +130,9 @@ impl KeySetMap {
         return false;
     }
 
-    pub fn release(&mut self, key: VirtualKey) {}
+    pub fn release(&mut self, _: VirtualKey) {}
 
-    pub fn put(&mut self, key_set: VirtualKeySet, binding: KeyHanderPtr) {
+    pub fn put(&mut self, key_set: VirtualKeySet, binding: KeyHandlerPtr) {
         self.key_set_list.insert(key_set, binding);
     }
 
@@ -155,7 +156,7 @@ pub fn bind_key_set(keys: &[VirtualKey], key: VirtualKey) {
 }
 
 /// bind a set of keys to a set of simulated keys
-/// 
+///
 /// the simulated keys will be pressed sequencely
 pub fn bind_key_sets(keys: &[VirtualKey], simulated_keys: &[VirtualKey]) {
     let simulated_keys = simulated_keys.to_vec();

@@ -1,7 +1,7 @@
-
+use serde::{Serialize, Deserialize};
 use num_enum::TryFromPrimitive;
 
-#[derive(Debug, Eq, PartialEq, Hash, TryFromPrimitive, Clone, Copy)]
+#[derive(Debug, Eq, PartialEq, Hash, TryFromPrimitive, Clone, Copy, Serialize, Deserialize)]
 #[repr(u32)]
 pub enum VirtualKey {
     Backspace = 0x08,
@@ -67,7 +67,7 @@ pub enum VirtualKey {
     RightControl = 0xA3,
 
     #[num_enum(default)]
-    Unkown = 0x0,
+    Unknown = 0x0,
 }
 
 #[derive(Debug, Eq, PartialEq, TryFromPrimitive)]
@@ -77,7 +77,7 @@ pub enum KeyAction {
     Release = 0x101,
 
     #[num_enum(default)]
-    Unkown = 0x0,
+    Unknown = 0x0,
 }
 
 #[derive(Debug, Eq, PartialEq, TryFromPrimitive)]
@@ -86,7 +86,7 @@ pub enum KeyStatus {
     Pressed,
     Released,
     #[num_enum(default)]
-    Unkown,
+    Unknown,
 }
 
 
@@ -95,7 +95,6 @@ pub trait Key {
     fn is_released(&self) -> bool;
     fn press(&self);
     fn on_pressed(&self, func: &dyn Fn() -> ());
-
 }
 
 

@@ -30,9 +30,9 @@ unsafe extern "system" fn keybd_proc(code: i32, wparam: WPARAM, lparam: LPARAM) 
         return CallNextHookEx(HHOOK::default(), code, wparam, lparam);
     }
     let action = KeyAction::try_from(wparam.0 as u32).unwrap();
-    let key_stuct = *(lparam.0 as *const KBDLLHOOKSTRUCT);
-    let vk_code = key_stuct.vkCode;
-    let extra_info = key_stuct.dwExtraInfo;
+    let key_struct = *(lparam.0 as *const KBDLLHOOKSTRUCT);
+    let vk_code = key_struct.vkCode;
+    let extra_info = key_struct.dwExtraInfo;
     let key = VirtualKey::try_from(vk_code).unwrap();
     if extra_info == 0x1234 {
         println!("a simulated key input is send");
@@ -51,7 +51,7 @@ unsafe extern "system" fn keybd_proc(code: i32, wparam: WPARAM, lparam: LPARAM) 
                 .unwrap()
                 .insert(key, KeyStatus::Released);
         }
-        KeyAction::Unkown => {}
+        KeyAction::Unknown => {}
     }
     println!("hook msg: key: {:?}, status:{:?}", &key, &action);
     let some_key_pressed = KEY_SET_MAP.lock().unwrap().go_through();
